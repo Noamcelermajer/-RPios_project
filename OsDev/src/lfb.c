@@ -1,10 +1,20 @@
 #include "mini_uart.h"
 #include "mBox.h"
 #include "homer.h"
+#include "star wars.h"
 #include "printf.h"
+#include "strings.h"
+
+extern unsigned char bss_end;
+
+#define NO_PICTURE 0
+#define HOMER_SIMPSON 1
+#define STAR_WARS_PICTURE 2
 
 unsigned int width, height, pitch, isrgb;   /* dimensions and channel order */
-unsigned char *lfb;                         /* raw frame buffer address */
+unsigned char* lfb;                         /* raw frame buffer address */
+
+int picture = 0;
 
 int x = 0;
 int y = 0;
@@ -72,36 +82,104 @@ void lfb_init()
 
     mbox[34] = MBOX_TAG_LAST;
 
-    if(mbox_call(MBOX_CH_PROP) && mbox[20]==32 && mbox[28]!=0) {
+    if(mbox_call(MBOX_CH_PROP) && mbox[20]==32 && mbox[28]!=0)
+    {
         mbox[28]&=0x3FFFFFFF;
         width=mbox[5];
         height=mbox[6];
         pitch=mbox[33];
         lfb=(void*)((unsigned long)mbox[28]);
-    } else {
-        printf("Unable to set screen resolution to 1024x768x32\n");
+    }
+    
+    else
+    {
+        printf("Unable to set screen resolution to 1024x768x32\r\n");
     }
 }
 
 /**
  * Show a picture
  */
-void lfb_showpicture()
+void lfb_showpicture(char* name)
 {
     int x,y;
     unsigned char *ptr=lfb;
-    char *data=homer_data, pixel[4];
+    char* data = 0, pixel[4];
+    unsigned int pic_height = 0, pic_width = 0, print = 0;
 
-    ptr += (height-homer_height)/2*pitch + (width-homer_width)*2;
-    for(y=0;y<homer_height;y++) {
-        for(x=0;x<homer_width;x++) {
-            HEADER_PIXEL(data, pixel);
-            // the image is in RGB. So if we have an RGB framebuffer, we can copy the pixels
-            // directly, but for BGR we must swap R (pixel[0]) and B (pixel[2]) channels.
-            *((unsigned int*)ptr)=isrgb ? *((unsigned int *)&pixel) : (unsigned int)(pixel[0]<<16 | pixel[1]<<8 | pixel[2]);
-            ptr+=4;
+    if(!strcmp(name, "Homer Simpson"))
+    {
+        print = 1;
+        data = homer_data;
+        pic_height = homer_height;
+        pic_width = homer_width;
+        picture = HOMER_SIMPSON;
+    }
+    
+    else if(!strcmp(name, "Star Wars Stormtrooper"))
+    {
+        print = 1;
+        data = star_wars_data;
+        pic_height = star_wars_height;
+        pic_width = star_wars_width;
+        picture = STAR_WARS_PICTURE;
+    } 
+
+    if(print)
+    {
+        ptr += (height-pic_height)/2*pitch + (width-pic_width)*2;
+        for(y=0;y<pic_height;y++)
+        {
+            for(x=0;x<pic_width;x++)
+            {
+                HEADER_PIXEL(data, pixel);
+                // the image is in RGB. So if we have an RGB framebuffer, we can copy the pixels
+                // directly, but for BGR we must swap R (pixel[0]) and B (pixel[2]) channels.
+                *((unsigned int*)ptr)=isrgb ? *((unsigned int *)&pixel) : (unsigned int)(pixel[0]<<16 | pixel[1]<<8 | pixel[2]);
+                ptr+=4;
+            }
+            ptr+=pitch-pic_width*4;
         }
-        ptr+=pitch-homer_width*4;
+    }
+}
+
+void lfb_removePicture()
+{
+    int x,y;
+    unsigned char *ptr=lfb;
+    unsigned int pic_height = 0, pic_width = 0, remove = 0;
+
+    if(picture == HOMER_SIMPSON)
+    {
+        remove = 1;
+        pic_height = homer_height;
+        pic_width = homer_width;
+
+    }
+
+    
+    else if(picture == STAR_WARS_PICTURE)
+    {
+        remove = 1;
+        pic_height = star_wars_height;
+        pic_width = star_wars_width;
+    }
+    
+
+    if(remove)
+    {
+        ptr += (height-pic_height)/2*pitch + (width-pic_width)*2;
+        for(y=0;y<pic_height;y++)
+        {
+            for(x=0;x<pic_width;x++)
+            {
+                *((unsigned int*)ptr) = 0;
+                ptr+=4;
+            }
+            ptr+=pitch-pic_width*4;
+        }
+
+        picture = NO_PICTURE;
     }
 }
 
@@ -155,7 +233,7 @@ void lfb_print(char *s)
 
 void lfb_deleteAll()
 {
-    char s[] = " ";
+    char s[] = "";
     // get our font
     psf_t *font = (psf_t*)&_binary_src_font_psf_start;
     // draw next character if it's not zero

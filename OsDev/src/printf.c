@@ -7,7 +7,7 @@ static putcf stdout_putf;
 static void *stdout_putp;
 extern uint8_t bss_end;
 
-#define FRAME_BUFFER 1    /* The switch for choosing to use the frame buffer or the UART, 0 - UART, 1 - frame buffer */
+#define FRAME_BUFFER 0    /* The switch for choosing to use the frame buffer or the UART, 0 - UART, 1 - frame buffer */
 
 #ifdef PRINTF_LONG_SUPPORT
 

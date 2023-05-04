@@ -5,7 +5,7 @@
  */
 void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    printf("Reach!!!!\n");
+    printf("Reach!!!!\r\n");
     // print out interruption type
     switch(type) {
         case 0: printf("Synchronous"); break;
@@ -44,23 +44,23 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
             case 1: printf(" at level 1"); break;
             case 2: printf(" at level 2"); break;
             case 3: printf(" at level 3"); break;
-            default : printf(" at unknown level :)\n"); break;
+            default : printf(" at unknown level :)\r\n"); break;
         }
     }
     // dump registers
-    printf(":\n  ESR_EL1 ");
+    printf(":\r\n  ESR_EL1 ");
     uart_hex(esr>>32);
     uart_hex(esr);
     printf(" ELR_EL1 ");
     uart_hex(elr>>32);
     uart_hex(elr);
-    printf("\n SPSR_EL1 ");
+    printf("\r\n SPSR_EL1 ");
     uart_hex(spsr>>32);
     uart_hex(spsr);
     printf(" FAR_EL1 ");
     uart_hex(far>>32);
     uart_hex(far);
-    printf("\n");
-    // no return from exception for now
+    printf("\r\n");
+    
     while(1);
 }

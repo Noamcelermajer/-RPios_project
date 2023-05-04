@@ -1,7 +1,11 @@
 #include "peripherals/gpio.h"
 #include "mBox.h"
 /* mailbox message buffer */
+
+extern unsigned char bss_end;
+
 volatile unsigned int  __attribute__((aligned(16))) mbox[36];
+
 #define MMIO_BASE 0x3F000000
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)
 #define MBOX_READ       ((volatile unsigned int*)(VIDEOCORE_MBOX+0x0))

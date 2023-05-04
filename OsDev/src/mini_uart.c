@@ -41,7 +41,7 @@ int uart_rcv_string(char* str,int size, int len_of_str)
 	int count = len_of_str;
   if(size == count)
   {
-      printf("You are about exceed the allowed size of input, would you like to overrride ? \n");
+      printf("You are about exceed the allowed size of input, would you like to overrride ? \r\n");
       answer = uart_recv();
       if(answer == 'y')
       {

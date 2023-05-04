@@ -59,24 +59,24 @@ int fat_getpartition(void)
     if(sd_readblock(0,&bss_end,1)) {
 
         if(mbr[510]!=0x55 || mbr[511]!=0xAA) {
-            printf("ERROR: Bad magic in MBR\n");
+            printf("ERROR: Bad magic in MBR\r\n");
             return 0;
         }
 
         if(mbr[0x1C2]!=0xE/*FAT16 LBA*/ && mbr[0x1C2]!=0xC/*FAT32 LBA*/) {
-            printf("ERROR: Wrong partition type\n");
+            printf("ERROR: Wrong partition type\r\n");
             return 0;
         }
         partitionlba=mbr[0x1C6] + (mbr[0x1C7]<<8) + (mbr[0x1C8]<<16) + (mbr[0x1C9]<<24);
         // read the boot record
         if(!sd_readblock(partitionlba,&bss_end,1)) {
-            printf("ERROR: Unable to read boot record\n");
+            printf("ERROR: Unable to read boot record\r\n");
             return 0;
         }
 
         if( !(bpb->fst[0]=='F' && bpb->fst[1]=='A' && bpb->fst[2]=='T') &&
             !(bpb->fst2[0]=='F' && bpb->fst2[1]=='A' && bpb->fst2[2]=='T')) {
-            printf("ERROR: Unknown file system type\n");
+            printf("ERROR: Unknown file system type\r\n");
             return 0;
         }
         return 1;
@@ -95,8 +95,8 @@ void fat_listdirectory(void)
     // find the root directory's LBA
     root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
     s = (bpb->nr0 + (bpb->nr1 << 8));
-    printf("FAT number of root diretory entries: ");
-    printf("%x", s);
+    // printf("FAT number of root diretory entries: ");
+    // printf("%x", s);
     s *= sizeof(fatdir_t);
     if(bpb->spf16==0) {
         // adjust for FAT32
@@ -104,12 +104,14 @@ void fat_listdirectory(void)
     }
     // add partition LBA
     root_sec+=partitionlba;
-    printf("\nFAT root directory LBA: ");
-    printf("%x", root_sec);
-    printf("\n");
+    // printf("\r\nFAT root directory LBA: ");
+    // printf("%x", root_sec);
+    // printf("\r\n");
     // load the root directory
-    if(sd_readblock(root_sec,(unsigned char*)&bss_end,s/512+1)) {
-        printf("\nAttrib    Cluster    Size    Name\n");
+    int cluster = 0, num = 0, size = 0;
+    if(sd_readblock(root_sec,(unsigned char*)&bss_end,s/512+1))
+    {
+        printf("\r\nAttrib    Cluster    Size       Name\r\n");
         // iterate on each entry and print out
         for(;dir->name[0]!=0;dir++) {
             // is it a valid entry?
@@ -123,18 +125,47 @@ void fat_listdirectory(void)
             printf(dir->attr[0]&32?"A":".");  // archive
             printf("    ");
             // staring cluster
-            printf("%x", ((unsigned int)dir->ch)<<16|dir->cl);
-            printf("        ");
+            cluster = ((unsigned int)dir->ch)<<16|dir->cl;
+            printf("%d", cluster);
+            do
+            {
+                num++;
+                cluster /= 10;
+            } while(cluster);
+
+            for(int i = 1; i <= 11 - num; i++)
+            {
+                printf(" ");
+            }
+            num = 0;
             // size
-            printf("%d", dir->size);
-            printf("        ");
+            size = dir->size;
+            printf("%d", size);
+            do
+            {
+                num++;
+                size /= 10;
+            } while(size);
+
+            for(int i = 1; i <= 11 - num; i++)
+            {
+                printf(" ");
+            }
+
+            num = 0;
+
             // filename
             dir->attr[0]=0;
             printf(dir->name);
-            printf("\n");
+            printf("\r\n");
         }
-    } else {
-        printf("ERROR: Unable to load root directory\n");
+
+        printf("\r\n");
+    }
+    
+    else
+    {
+        printf("ERROR: Unable to load root directory\r\n");
     }
 }
 
@@ -163,18 +194,18 @@ unsigned int fat_getcluster(char *fn)
             if(dir->name[0]==0xE5 || dir->attr[0]==0xF) continue;
             // filename match?
             if(!memcmp(dir->name,fn,11)) {
-                printf("FAT File ");
-                printf(fn);
-                printf(" starts at cluster: ");
-                printf("%x", ((unsigned int)dir->ch)<<16|dir->cl);
-                printf("\n");
+                // printf("FAT File ");
+                // printf(fn);
+                // printf(" starts at cluster: ");
+                // printf("%x", ((unsigned int)dir->ch)<<16|dir->cl);
+                // printf("\r\n");
                 // if so, return starting cluster
                 return ((unsigned int)dir->ch)<<16|dir->cl;
             }
         }
-        printf("ERROR: file not found\n");
+        printf("ERROR: file not found\r\n");
     } else {
-        printf("ERROR: Unable to load root directory\n");
+        printf("ERROR: Unable to load root directory\r\n");
     }
     return 0;
 }
@@ -202,25 +233,28 @@ char *fat_readfile(unsigned int cluster)
     // add partition LBA
     data_sec+=partitionlba;
     // dump important properties
-    printf("FAT Bytes per Sector: ");
-    printf("%x", (bpb->bps0 + (bpb->bps1 << 8)));
-    printf("\nFAT Sectors per Cluster: ");
-    printf("%x", bpb->spc);
-    printf("\nFAT Number of FAT: ");
-    printf("%x", bpb->nf);
-    printf("\nFAT Sectors per FAT: ");
-    printf("%x", (bpb->spf16?bpb->spf16:bpb->spf32));
-    printf("\nFAT Reserved Sectors Count: ");
-    printf("%x", bpb->rsc);
-    printf("\nFAT First data sector: ");
-    printf("%x", data_sec);
-    printf("\n");
+    // printf("FAT Bytes per Sector: ");
+    // printf("%x", (bpb->bps0 + (bpb->bps1 << 8)));
+    // printf("\r\nFAT Sectors per Cluster: ");
+    // printf("%x", bpb->spc);
+    // printf("\r\nFAT Number of FAT: ");
+    // printf("%x", bpb->nf);
+    // printf("\r\nFAT Sectors per FAT: ");
+    // printf("%x", (bpb->spf16?bpb->spf16:bpb->spf32));
+    // printf("\r\nFAT Reserved Sectors Count: ");
+    // printf("%x", bpb->rsc);
+    // printf("\r\nFAT First data sector: ");
+    // printf("%x", data_sec);
+    // printf("\r\n");
     // load FAT table
-    s=sd_readblock(partitionlba+1,(unsigned char*)&bss_end+512,(bpb->spf16?bpb->spf16:bpb->spf32)+bpb->rsc);
+    // (bpb->spf16?bpb->spf16:bpb->spf32)+bpb->rsc
+    // s = sd_readblock(partitionlba + 1, (unsigned char*)&bss_end + 512, 7000);
+    // s += sd_readblock(partitionlba + 1, (unsigned char*)&bss_end + 512 + 7100 * 512, (bpb->spf16?bpb->spf16:bpb->spf32)+bpb->rsc - 7100);
     // end of FAT in memory
-    data=ptr=&bss_end+512+s;
+    data=ptr=&bss_end+512;
     // iterate on cluster chain
-    while(cluster>1 && cluster<0xFFF8) {
+    while(cluster>1 && cluster<0xFFF8)
+    {
         // load all sectors in a cluster
         sd_readblock((cluster-2)*bpb->spc+data_sec,ptr,bpb->spc);
         // move pointer, sector per cluster * bytes per sector
