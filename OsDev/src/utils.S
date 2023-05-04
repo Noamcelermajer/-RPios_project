@@ -19,3 +19,10 @@ delay:
 	subs x0, x0, #1
 	bne delay
 	ret
+
+.globl exit
+exit:
+  mov w0, 0x18
+  mov x1, #0x20000
+  add x1, x1, #0x26
+  hlt #0xF000
