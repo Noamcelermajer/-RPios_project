@@ -1,15 +1,27 @@
 #include "peripherals/mini_uart.h"
 #include "mini_uart.h"
 #include "peripherals/gpio.h"
+#include "mBox.h"
+#include "delays.h"
 #include "utils.h"
 #include "strings.h"
 #include "printf.h"
+
+/* PL011 UART registers */
+#define UART0_DR        ((volatile unsigned int*)(MMIO_BASE+0x00201000))
+#define UART0_FR        ((volatile unsigned int*)(MMIO_BASE+0x00201018))
+#define UART0_IBRD      ((volatile unsigned int*)(MMIO_BASE+0x00201024))
+#define UART0_FBRD      ((volatile unsigned int*)(MMIO_BASE+0x00201028))
+#define UART0_LCRH      ((volatile unsigned int*)(MMIO_BASE+0x0020102C))
+#define UART0_CR        ((volatile unsigned int*)(MMIO_BASE+0x00201030))
+#define UART0_IMSC      ((volatile unsigned int*)(MMIO_BASE+0x00201038))
+#define UART0_ICR       ((volatile unsigned int*)(MMIO_BASE+0x00201044))
+
 void uart_send(char c) {
-  while (1) {
-    if (get32(AUX_MU_LSR_REG) & 0x20)
-      break;
-  }
-  put32(AUX_MU_IO_REG, c);
+   /* wait until we can send */
+    do{asm volatile("nop");}while(*UART0_FR&0x20);
+    /* write the character to the buffer */
+    *UART0_DR=c;
 }
 
 void uart_hex(unsigned int d) {
@@ -62,13 +74,13 @@ int uart_rcv_string(char* str,int size, int len_of_str)
 
 char uart_recv(void)
 {
-  while (1)
-  {
-    if (get32(AUX_MU_LSR_REG) & 0x01)
-      break;
-  }
-  char r = (char)(get32(AUX_MU_IO_REG) & 0xFF);
-  return( (r == '\r') ? '\n' : r);
+  char r;
+    /* wait until something is in the buffer */
+    do{asm volatile("nop");}while(*UART0_FR&0x10);
+    /* read it and return */
+    r=(char)(*UART0_DR);
+    /* convert carrige return to newline */
+    return r=='\r'?'\n':r;
 }
 
 void uart_send_string(char *str) {
@@ -82,31 +94,39 @@ void uart_send_string(char *str) {
 }
 
 void uart_init(void) {
-  unsigned int selector;
+  register unsigned int r;
 
-  selector = get32(GPFSEL1);
-  selector &= ~(7 << 12); // clean gpio14
-  selector |= 2 << 12;    // set alt5 for gpio14
-  selector &= ~(7 << 15); // clean gpio15
-  selector |= 2 << 15;    // set alt5 for gpio15
-  put32(GPFSEL1, selector);
+    /* initialize UART */
+    *UART0_CR = 0;         // turn off UART0
 
-  put32(GPPUD, 0);
-  delay(150);
-  put32(GPPUDCLK0, (1 << 14) | (1 << 15));
-  delay(150);
-  put32(GPPUDCLK0, 0);
+    /* set up clock for consistent divisor values */
+    mbox[0] = 9*4;
+    mbox[1] = MBOX_REQUEST;
+    mbox[2] = MBOX_TAG_SETCLKRATE; // set clock rate
+    mbox[3] = 12;
+    mbox[4] = 8;
+    mbox[5] = 2;           // UART clock
+    mbox[6] = 4000000;     // 4Mhz
+    mbox[7] = 0;           // clear turbo
+    mbox[8] = MBOX_TAG_LAST;
+    mbox_call(MBOX_CH_PROP);
 
-  put32(AUX_ENABLES,
-        1); // Enable mini uart (this also enables access to it registers)
-  put32(AUX_MU_CNTL_REG, 0); // Disable auto flow control and disable receiver
-                             // and transmitter (for now)
-  put32(AUX_MU_IER_REG, 0);    // Disable receive and transmit interrupts
-  put32(AUX_MU_LCR_REG, 3);    // Enable 8 bit mode
-  put32(AUX_MU_MCR_REG, 0);    // Set RTS line to be always high
-  put32(AUX_MU_BAUD_REG, 270); // Set baud rate to 115200
+    /* map UART0 to GPIO pins */
+    r=*GPFSEL1;
+    r&=~((7<<12)|(7<<15)); // gpio14, gpio15
+    r|=(4<<12)|(4<<15);    // alt0
+    *GPFSEL1 = r;
+    *GPPUD = 0;            // enable pins 14 and 15
+    wait_cycles(150);
+    *GPPUDCLK0 = (1<<14)|(1<<15);
+    wait_cycles(150);
+    *GPPUDCLK0 = 0;        // flush GPIO setup
 
-  put32(AUX_MU_CNTL_REG, 3); // Finally, enable transmitter and receiver
+    *UART0_ICR = 0x7FF;    // clear interrupts
+    *UART0_IBRD = 2;       // 115200 baud
+    *UART0_FBRD = 0xB;
+    *UART0_LCRH = 0b11<<5; // 8n1
+    *UART0_CR = 0x301;     // enable Tx, Rx, FIFO
 }
 
 void uart_dump(void *ptr)

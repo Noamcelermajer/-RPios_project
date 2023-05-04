@@ -96,7 +96,7 @@ void fat_listdirectory(void)
     root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
     s = (bpb->nr0 + (bpb->nr1 << 8));
     printf("FAT number of root diretory entries: ");
-    uart_hex(s);
+    printf("%x", s);
     s *= sizeof(fatdir_t);
     if(bpb->spf16==0) {
         // adjust for FAT32
@@ -105,29 +105,29 @@ void fat_listdirectory(void)
     // add partition LBA
     root_sec+=partitionlba;
     printf("\nFAT root directory LBA: ");
-    uart_hex(root_sec);
+    printf("%x", root_sec);
     printf("\n");
     // load the root directory
     if(sd_readblock(root_sec,(unsigned char*)&bss_end,s/512+1)) {
-        printf("\nAttrib Cluster  Size     Name\n");
+        printf("\nAttrib    Cluster    Size    Name\n");
         // iterate on each entry and print out
         for(;dir->name[0]!=0;dir++) {
             // is it a valid entry?
             if(dir->name[0]==0xE5 || dir->attr[0]==0xF) continue;
             // decode attributes
-            uart_send(dir->attr[0]& 1?'R':'.');  // read-only
-            uart_send(dir->attr[0]& 2?'H':'.');  // hidden
-            uart_send(dir->attr[0]& 4?'S':'.');  // system
-            uart_send(dir->attr[0]& 8?'L':'.');  // volume label
-            uart_send(dir->attr[0]&16?'D':'.');  // directory
-            uart_send(dir->attr[0]&32?'A':'.');  // archive
-            uart_send(' ');
+            printf(dir->attr[0]& 1?"R":".");  // read-only
+            printf(dir->attr[0]& 2?"H":".");  // hidden
+            printf(dir->attr[0]& 4?"S":".");  // system
+            printf(dir->attr[0]& 8?"L":".");  // volume label
+            printf(dir->attr[0]&16?"D":".");  // directory
+            printf(dir->attr[0]&32?"A":".");  // archive
+            printf("    ");
             // staring cluster
-            uart_hex(((unsigned int)dir->ch)<<16|dir->cl);
-            uart_send(' ');
+            printf("%x", ((unsigned int)dir->ch)<<16|dir->cl);
+            printf("        ");
             // size
-            uart_hex(dir->size);
-            uart_send(' ');
+            printf("%d", dir->size);
+            printf("        ");
             // filename
             dir->attr[0]=0;
             printf(dir->name);
@@ -166,7 +166,7 @@ unsigned int fat_getcluster(char *fn)
                 printf("FAT File ");
                 printf(fn);
                 printf(" starts at cluster: ");
-                uart_hex(((unsigned int)dir->ch)<<16|dir->cl);
+                printf("%x", ((unsigned int)dir->ch)<<16|dir->cl);
                 printf("\n");
                 // if so, return starting cluster
                 return ((unsigned int)dir->ch)<<16|dir->cl;
@@ -203,17 +203,17 @@ char *fat_readfile(unsigned int cluster)
     data_sec+=partitionlba;
     // dump important properties
     printf("FAT Bytes per Sector: ");
-    uart_hex(bpb->bps0 + (bpb->bps1 << 8));
+    printf("%x", (bpb->bps0 + (bpb->bps1 << 8)));
     printf("\nFAT Sectors per Cluster: ");
-    uart_hex(bpb->spc);
+    printf("%x", bpb->spc);
     printf("\nFAT Number of FAT: ");
-    uart_hex(bpb->nf);
+    printf("%x", bpb->nf);
     printf("\nFAT Sectors per FAT: ");
-    uart_hex((bpb->spf16?bpb->spf16:bpb->spf32));
+    printf("%x", (bpb->spf16?bpb->spf16:bpb->spf32));
     printf("\nFAT Reserved Sectors Count: ");
-    uart_hex(bpb->rsc);
+    printf("%x", bpb->rsc);
     printf("\nFAT First data sector: ");
-    uart_hex(data_sec);
+    printf("%x", data_sec);
     printf("\n");
     // load FAT table
     s=sd_readblock(partitionlba+1,(unsigned char*)&bss_end+512,(bpb->spf16?bpb->spf16:bpb->spf32)+bpb->rsc);

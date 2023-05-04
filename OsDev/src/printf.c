@@ -1,29 +1,13 @@
-/*
-File: printf.c
-
-Copyright (C) 2004  Kustaa Nyholm
-
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-*/
-
 #include "printf.h"
+#include "lfb.h"
+#include <stdint.h>
 
 typedef void (*putcf)(void *, char);
 static putcf stdout_putf;
 static void *stdout_putp;
+extern uint8_t bss_end;
+
+#define FRAME_BUFFER 1    /* The switch for choosing to use the frame buffer or the UART, 0 - UART, 1 - frame buffer */
 
 #ifdef PRINTF_LONG_SUPPORT
 
@@ -199,19 +183,31 @@ void init_printf(void *putp, void (*putf)(void *, char)) {
   stdout_putp = putp;
 }
 
-void tfp_printf(char *fmt, ...) {
-  va_list va;
-  va_start(va, fmt);
-  tfp_format(stdout_putp, stdout_putf, fmt, va);
-  va_end(va);
+static void putcp(void *p, char c)
+{ 
+  *(*((char **)p))++ = c;
 }
 
-static void putcp(void *p, char c) { *(*((char **)p))++ = c; }
-
-void tfp_sprintf(char *s, char *fmt, ...) {
+void tfp_printf(char *fmt, ...) {
   va_list va;
-  va_start(va, fmt);
+  if(FRAME_BUFFER)
+  {
+    char s[999] = "";
+    va_start(va, fmt);
+    sprintf(s, fmt, va);
+    va_end(va);
+    lfb_print(s);
+  }
+  else
+  {
+    va_start(va, fmt);
+    tfp_format(stdout_putp, stdout_putf, fmt, va);
+    va_end(va);
+  }
+}
+
+void tfp_sprintf(char *s, char *fmt, va_list va)
+{
   tfp_format(&s, putcp, fmt, va);
   putcp(&s, 0);
-  va_end(va);
 }
