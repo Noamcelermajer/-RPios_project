@@ -1,24 +1,39 @@
+ARMGNU ?= aarch64-elf
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+ASMOPS = -Iinclude 
 
+BUILD_DIR = build
+SRC_DIR = src
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
+all : kernel8.img
 
-all: clean kernel8.img
+clean :
+	rm -rf $(BUILD_DIR) *.img 
 
-start.o: start.S
-	aarch64-elf-gcc $(CFLAGS) -c start.S -o start.o
+$(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
+	mkdir -p $(@D)
+	$(ARMGNU)-gcc $(COPS) -MMD -c $< -o $@
 
-%.o: %.c
-	aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
+	$(ARMGNU)-gcc $(ASMOPS) -MMD -c $< -o $@
 
-kernel8.img: start.o $(OBJS)
-	aarch64-elf-ld -nostdlib -nostartfiles start.o $(OBJS) -T link.ld -o kernel8.elf
-	aarch64-elf-objcopy -O binary kernel8.elf kernel8.img
+$(BUILD_DIR)/%_psf.o: $(SRC_DIR)/%.psf
+	$(ARMGNU)-ld -r -b binary -o -c $< -o $@
 
-clean:
-	rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+C_FILES = $(wildcard $(SRC_DIR)/*.c)
+ASM_FILES = $(wildcard $(SRC_DIR)/*.S)
+PSF_FILES = $(wildcard $(SRC_DIR)/*.psf)
+OBJ_FILES = $(C_FILES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%_c.o)
+OBJ_FILES += $(ASM_FILES:$(SRC_DIR)/%.S=$(BUILD_DIR)/%_s.o)
+OBJ_FILES += $(PSF_FILES:$(SRC_DIR)/%.psf=$(BUILD_DIR)/%_psf.o)
 
-run:
-	qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial null -serial stdio
-#serial null and serial stdio are needed for redirecting uart1 -> to terminal (because qemu wont do it automatically because it is not supposed to work that way we should use Uart0 instead but for that we must implement a mailboc system )
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
+-include $(DEP_FILES)
+
+kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
+	
+	$(ARMGNU)-ld -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
+
+run: 
+	qemu-system-aarch64 -M raspi3 -semihosting -kernel kernel8.img -drive file=kernel8.img,if=sd,format=raw -serial stdio
