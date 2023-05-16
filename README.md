@@ -29,7 +29,7 @@ Based on the file structure you provided, here is an overview:
     - **src**: This directory contains all the source code files (.c and .S files). These files are compiled to create the OS.
         - `boot.S`: Assembly code for system bootstrap.
         - `kernel.c`: Main kernel code.
-        - `mm.S`: Assembly code for memory management.
+        - `mm.S`: Memzero implementation
         - `utils.S`: Assembly utility functions.
         - Other `.c` files: These implement various functionalities, such as delays, FAT filesystem operations, framebuffer handling, mailbox communication, memory operations, UART, power management, printing, SD card operations, shell, standard library functions, and string operations.
         - `linker.ld`: Linker script to control the memory layout of the final OS image.
