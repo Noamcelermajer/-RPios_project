@@ -2,24 +2,37 @@
 
 This project is a bare metal operating system for the Raspberry Pi 3, written in AArch64 assembly and C. It is designed to be a learning tool for understanding operating system fundamentals and Raspberry Pi hardware specifics. The operating system implements a basic shell, using the mailbox interface to communicate with the VideoCore GPU for output. 
 
-## Features
 
-- **Bare Metal Booting and Initial Setup:** The system boots up in AArch64 assembly, with a detailed boot sequence responsible for setting up the environment, including setting up the stack and transitioning from EL3 to EL2.
+## 🚀 Features
 
-- **Exception Handling:** The boot code includes handlers for synchronous exceptions, IRQs, FIQs, and system errors. This enables the OS to react and handle different kinds of hardware and software exceptions.
+This project has a number of unique features:
 
-- **Mailbox Interface for GPU Communication:** The mailbox interface is used to communicate with the VideoCore GPU. It allows the OS to set display properties and handle output functionalities.
+### 1. Bare Metal Booting and Initial Setup
+- Our system starts in AArch64 assembly, executing a detailed boot sequence that sets up the environment, manages the stack, and transitions from EL3 to EL2.
 
-- **Memory Management:** The OS includes basic memory management features. The `bss` section of memory, which is used for uninitialized global variables, is zeroed out during boot. This is a common practice in OS development to avoid undefined behavior.
+### 2. Exception Handling
+- The boot code incorporates handlers for synchronous exceptions, IRQs, FIQs, and system errors, enabling the OS to respond to and manage various hardware and software exceptions, such as division by zero or accessing invalid memory addresses.
 
-- **Basic Shell:** The OS includes a basic shell which provides a simple command interface. This shell leverages the mailbox interface to send output to the GPU.
+### 3. Resource Management
+- The kernel efficiently manages computer resources, allowing other programs to use these resources and execute. This encompasses CPU scheduling, device management, and memory allocation.
 
-- **File System Support:** The OS includes support for the FAT file system (`fat.c`), a widely used file system for removable storage devices. This allows the OS to read and write files from SD cards, USB drives, etc.
+### 4. Mailbox Interface for GPU Communication
+- The system utilizes the mailbox interface to communicate with the VideoCore GPU, permitting the OS to set display properties and manage output functionalities.
 
-- **Custom Linker Script:** A custom linker script is used to control the memory layout of the code, specifying where each section of the code should be loaded in memory.
+### 5. Memory Management
+- Our system provides basic memory management features. For example, the bss section of memory, which is used for uninitialized global variables, is zeroed out during boot to prevent undefined behavior. Additionally, the kernel partitions memory into kernel space and user space and oversees swap space or virtual memory on the hard drive.
 
-- **QEMU Emulation Support:** The system can be tested locally using QEMU, a generic and open source machine emulator and virtualizer, which provides a convenient development and testing environment.
+### 6. Basic Shell and Command Interpretation
+- The OS includes a basic shell that provides a simple command interface. This shell leverages the mailbox interface to send output to the GPU. Moreover, the kernel can interpret user input and execute corresponding functions.
 
+### 7. File System Support
+- The OS supports the FAT file system, a popular system for removable storage devices. This feature enables the OS to read from and write to SD cards, USB drives, and more. It also manages file permissions, maintains a directory structure for files, and handles file operations like opening, closing, reading, and writing.
+
+### 8. Custom Linker Script
+- A custom linker script is used to control the memory layout of the code, specifying where each section of the code should be loaded in memory.
+
+### 9. QEMU Emulation Support
+- The system is compatible with local testing via QEMU, an open-source machine emulator and virtualizer. This facilitates a convenient development and testing environment. QEMU allows the running of one or more operating systems using KVM and Xen hypervisors, or just binaries, in an OS environment already installed on the computer.
 
 ## Project File Structure
 Based on the file structure you provided, here is an overview:
