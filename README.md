@@ -35,7 +35,6 @@ This project has a number of unique features:
 - The system is compatible with local testing via QEMU, an open-source machine emulator and virtualizer. This facilitates a convenient development and testing environment. QEMU allows the running of one or more operating systems using KVM and Xen hypervisors, or just binaries, in an OS environment already installed on the computer.
 
 ## Project File Structure
-Based on the file structure you provided, here is an overview:
 
 - **OsDev**: This is the root directory of the project. It contains all the source files, header files, build files, the Makefile, and the final OS image. 
 
